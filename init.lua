@@ -253,8 +253,52 @@ require('lazy').setup({
     },
     opts = {
       adapters = {
-        'neotest-python',
-        'rustaceanvim.neotest',
+        ['neotest-python'] = {
+          dap = { justMyCode = false },
+          args = { '--log-level=DEBUG --verbosity=4' },
+          runner = 'pytest',
+          pytest_discover_instances = true,
+          is_test_file = function(file_path)
+            if file_path == nil then
+              return false
+            end
+            if string.starts(file_path, 'test_') then
+              return true
+            end
+            return false
+          end,
+        },
+      },
+    },
+    keys = {
+      {
+        '<leader>tr',
+        function()
+          require('neotest').run.run '.'
+        end,
+        desc = 'Run Test',
+      },
+
+      {
+        '<leader>tl',
+        function()
+          require('neotest').run.run_last()
+        end,
+        desc = 'Run Last Test',
+      },
+      {
+        '<leader>tL',
+        function()
+          require('neotest').run.run_last { strategy = 'dap' }
+        end,
+        desc = 'Debug Last Test',
+      },
+      {
+        '<leader>tw',
+        function()
+          require('neotest').run.watch()
+        end,
+        desc = 'Run Watch',
       },
     },
   },
@@ -283,6 +327,27 @@ require('lazy').setup({
       vim.keymap.set('n', '<leader>x', api.tree.toggle, { desc = 'Open E[x]plorer' })
     end,
   },
+  {
+    'kdheepak/lazygit.nvim',
+    cmd = {
+      'LazyGit',
+      'LazyGitConfig',
+      'LazyGitCurrentFile',
+      'LazyGitFilter',
+      'LazyGitFilterCurrentFile',
+    },
+    -- optional for floating window border decoration
+    dependencies = {
+      'nvim-lua/plenary.nvim',
+    },
+    lazy = false,
+    config = function()
+      local api = require 'lazygit'
+      vim.keymap.set('n', '<leader>g', api.lazygitcurrentfile, { desc = 'Open Lazy[g]it' })
+    end,
+  },
+  -- snippets 
+  { "rafamadriz/friendly-snippets" },
   -- "gc" to comment visual regions/lines
   { 'numToStr/Comment.nvim', opts = {} },
 
@@ -332,6 +397,7 @@ require('lazy').setup({
         ['<leader>r'] = { name = '[R]ename', _ = 'which_key_ignore' },
         ['<leader>s'] = { name = '[S]earch', _ = 'which_key_ignore' },
         ['<leader>w'] = { name = '[W]orkspace', _ = 'which_key_ignore' },
+        ['<leader>t'] = { name = '[T]est', _ = 'which_key_ignore' },
       }
     end,
   },
@@ -574,6 +640,7 @@ require('lazy').setup({
       local capabilities = vim.lsp.protocol.make_client_capabilities()
       capabilities = vim.tbl_deep_extend('force', capabilities, require('cmp_nvim_lsp').default_capabilities())
 
+      capabilities.textDocument.completion.completionItem.snippetSupport = true
       -- Enable the following language servers
       --  Feel free to add/remove any LSPs that you want here. They will automatically be installed.
       --
@@ -586,7 +653,25 @@ require('lazy').setup({
       local servers = {
         -- clangd = {},
         -- gopls = {},
-        -- pyright = {},
+        pyright = {
+          capabilities = capabilities,
+        },
+        taplo = {
+          capabilities = capabilities,
+        },
+        ruff_lsp = {
+          -- organize imports disabled, since we are already using `isort` for that
+          -- alternative, this can be enabled to make `organize imports`
+          -- available as code action
+          settings = {
+            organizeImports = false,
+          },
+          -- disable ruff as hover provider to avoid conflicts with pyright
+          on_attach = function(client)
+            client.server_capabilities.hoverProvider = false
+          end,
+        },
+
         -- rust_analyzer = {},
         -- ... etc. See `:help lspconfig-all` for a list of all the pre-configured LSPs
         --
@@ -626,6 +711,12 @@ require('lazy').setup({
       local ensure_installed = vim.tbl_keys(servers or {})
       vim.list_extend(ensure_installed, {
         'stylua', -- Used to format Lua code
+        'pyright', -- LSP for python
+        'ruff-lsp', -- linter for python (includes flake8, pep8, etc.)
+        'debugpy', -- debugger
+        'black', -- formatter
+        'isort', -- organize imports
+        'taplo', -- LSP for toml (for pyproject.toml files)
       })
       require('mason-tool-installer').setup { ensure_installed = ensure_installed }
 
@@ -646,6 +737,16 @@ require('lazy').setup({
 
   { -- Autoformat
     'stevearc/conform.nvim',
+    keys = {
+      {
+        '<leader>cf',
+        function()
+          require('conform').format { lsp_fallback = true }
+        end,
+        desc = '[f]ormat',
+      },
+    },
+
     opts = {
       notify_on_error = false,
       format_on_save = function(bufnr)
@@ -666,6 +767,8 @@ require('lazy').setup({
         -- You can use a sub-list to tell conform to run *until* a formatter
         -- is found.
         javascript = { 'prettierd', 'prettier' },
+
+        markdown = { 'inject' },
       },
     },
   },
@@ -690,12 +793,12 @@ require('lazy').setup({
           -- `friendly-snippets` contains a variety of premade snippets.
           --    See the README about individual language/framework/plugin snippets:
           --    https://github.com/rafamadriz/friendly-snippets
-          -- {
-          --   'rafamadriz/friendly-snippets',
-          --   config = function()
-          --     require('luasnip.loaders.from_vscode').lazy_load()
-          --   end,
-          -- },
+          {
+            'rafamadriz/friendly-snippets',
+            config = function()
+              require('luasnip.loaders.from_vscode').lazy_load()
+            end,
+          },
         },
       },
       'saadparwaiz1/cmp_luasnip',
@@ -725,19 +828,28 @@ require('lazy').setup({
         --
         -- No, but seriously. Please read `:help ins-completion`, it is really good!
         mapping = cmp.mapping.preset.insert {
-          -- Select the [n]ext item
-          ['<C-n>'] = cmp.mapping.select_next_item(),
-          -- Select the [p]revious item
-          ['<C-p>'] = cmp.mapping.select_prev_item(),
-
+          ['<Tab>'] = cmp.mapping(function(fallback)
+            if cmp.visible() then
+              cmp.select_next_item()
+            else
+              fallback()
+            end
+          end, { 'i', 's' }),
+          ['<S-Tab>'] = cmp.mapping(function(fallback)
+            if cmp.visible() then
+              cmp.select_prev_item()
+            else
+              fallback()
+            end
+          end, { 'i', 's' }),
           -- Scroll the documentation window [b]ack / [f]orward
           ['<C-b>'] = cmp.mapping.scroll_docs(-4),
           ['<C-f>'] = cmp.mapping.scroll_docs(4),
-
           -- Accept ([y]es) the completion.
           --  This will auto-import if your LSP supports it.
           --  This will expand snippets if the LSP sent a snippet.
           ['<C-y>'] = cmp.mapping.confirm { select = true },
+          ['<CR>'] = cmp.mapping.confirm { select = true }, -- true = autoselect first entry
 
           -- Manually trigger a completion from nvim-cmp.
           --  Generally you don't need this, because nvim-cmp will display
@@ -836,7 +948,20 @@ require('lazy').setup({
     'nvim-treesitter/nvim-treesitter',
     build = ':TSUpdate',
     opts = {
-      ensure_installed = { 'bash', 'c', 'html', 'lua', 'markdown', 'vim', 'vimdoc' },
+      ensure_installed = {
+        'bash',
+        'c',
+        'html',
+        'lua',
+        'markdown',
+        'vim',
+        'vimdoc',
+        'python',
+        'toml',
+        'rst',
+        'ninja',
+        'markdown_inline',
+      },
       -- Autoinstall languages that are not installed
       auto_install = true,
       highlight = {
@@ -875,6 +1000,7 @@ require('lazy').setup({
   -- require 'kickstart.plugins.debug',
   -- require 'kickstart.plugins.indent_line',
   -- require 'kickstart.plugins.lint',
+  require 'kickstart.plugins.python',
 
   -- NOTE: The import below can automatically add your own plugins, configuration, etc from `lua/custom/plugins/*.lua`
   --    This is the easiest way to modularize your config.
@@ -906,3 +1032,4 @@ require('lazy').setup({
 
 -- The line beneath this is called `modeline`. See `:help modeline`
 -- vim: ts=2 sts=2 sw=2 et
+--
