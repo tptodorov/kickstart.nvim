@@ -289,16 +289,9 @@ require('lazy').setup({
       {
         '<leader>tL',
         function()
-          require('neotest').run.run_last { strategy = 'dap' }
+          -- require('neotest').run.run_last { strategy = 'dap' }
         end,
         desc = 'Debug Last Test',
-      },
-      {
-        '<leader>tw',
-        function()
-          require('neotest').run.watch()
-        end,
-        desc = 'Run Watch',
       },
     },
   },
@@ -376,7 +369,6 @@ require('lazy').setup({
       vim.g.barbar_auto_setup = false
       local opts = { noremap = true, silent = true }
 
-      local api = require 'barbar.api'
       local map = vim.keymap.set
       vim.keymap.set('n', '<A-1>', '<Cmd>BufferGoto 1<CR>', opts)
 
