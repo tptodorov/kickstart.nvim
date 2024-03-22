@@ -311,7 +311,26 @@ require('lazy').setup({
       require('crates').setup()
     end,
   },
-
+  -- show file symbols and structure on the side
+  {
+    'stevearc/aerial.nvim',
+    opts = {
+      on_attach = function(bufnr)
+        -- Jump forwards/backwards with '{' and '}'
+        vim.keymap.set('n', '{', '<cmd>AerialPrev<CR>', { buffer = bufnr })
+        vim.keymap.set('n', '}', '<cmd>AerialNext<CR>', { buffer = bufnr })
+      end,
+    },
+    lazy = false,
+    -- Optional dependencies
+    dependencies = {
+      'nvim-treesitter/nvim-treesitter',
+      'nvim-tree/nvim-web-devicons',
+    },
+    config = function()
+      vim.keymap.set('n', '<leader>a', '<cmd>[A]erialToggle!<CR>')
+    end,
+  },
   -- file explorer
   {
     'nvim-tree/nvim-tree.lua',
@@ -346,8 +365,156 @@ require('lazy').setup({
       vim.keymap.set('n', '<leader>g', api.lazygitcurrentfile, { desc = 'Open Lazy[g]it' })
     end,
   },
-  -- snippets 
-  { "rafamadriz/friendly-snippets" },
+  -- tab on top
+  {
+    'romgrk/barbar.nvim',
+    dependencies = {
+      'lewis6991/gitsigns.nvim', -- OPTIONAL: for git status
+      'nvim-tree/nvim-web-devicons', -- OPTIONAL: for file icons
+    },
+    init = function()
+      vim.g.barbar_auto_setup = false
+      local opts = { noremap = true, silent = true }
+
+      local api = require 'barbar.api'
+      local map = vim.keymap.set
+      vim.keymap.set('n', '<A-1>', '<Cmd>BufferGoto 1<CR>', opts)
+
+      -- Move to previous/next
+      map('n', '<A-,>', '<Cmd>BufferPrevious<CR>', opts)
+      map('n', '<A-.>', '<Cmd>BufferNext<CR>', opts)
+      -- Re-order to previous/next
+      map('n', '<A-<>', '<Cmd>BufferMovePrevious<CR>', opts)
+      map('n', '<A->>', '<Cmd>BufferMoveNext<CR>', opts)
+      -- Goto buffer in position...
+      map('n', '<A-1>', '<Cmd>BufferGoto 1<CR>', opts)
+      map('n', '<A-2>', '<Cmd>BufferGoto 2<CR>', opts)
+      map('n', '<A-3>', '<Cmd>BufferGoto 3<CR>', opts)
+      map('n', '<A-4>', '<Cmd>BufferGoto 4<CR>', opts)
+      map('n', '<A-5>', '<Cmd>BufferGoto 5<CR>', opts)
+      map('n', '<A-6>', '<Cmd>BufferGoto 6<CR>', opts)
+      map('n', '<A-7>', '<Cmd>BufferGoto 7<CR>', opts)
+      map('n', '<A-8>', '<Cmd>BufferGoto 8<CR>', opts)
+      map('n', '<A-9>', '<Cmd>BufferGoto 9<CR>', opts)
+      map('n', '<A-0>', '<Cmd>BufferLast<CR>', opts)
+      -- Pin/unpin buffer
+      map('n', '<A-P>', '<Cmd>BufferPin<CR>', opts)
+      -- Close buffer
+      map('n', '<A-c>', '<Cmd>BufferClose<CR>', opts)
+      -- Wipeout buffer
+      --                 :BufferWipeout
+      -- Close commands
+      --                 :BufferCloseAllButCurrent
+      --                 :BufferCloseAllButPinned
+      --                 :BufferCloseAllButCurrentOrPinned
+      --                 :BufferCloseBuffersLeft
+      --                 :BufferCloseBuffersRight
+      -- Magic buffer-picking mode
+      map('n', '<A-p>', '<Cmd>BufferPick<CR>', opts)
+    end,
+    opts = {
+
+      -- Enable/disable animations
+      animation = true,
+
+      -- Enables/disable clickable tabs
+      --  - left-click: go to buffer
+      --  - middle-click: delete buffer
+      clickable = true,
+
+      -- A buffer to this direction will be focused (if it exists) when closing the current buffer.
+      -- Valid options are 'left' (the default), 'previous', and 'right'
+      focus_on_close = 'left',
+
+      -- Disable highlighting alternate buffers
+      highlight_alternate = false,
+
+      -- Disable highlighting file icons in inactive buffers
+      highlight_inactive_file_icons = false,
+
+      -- Enable highlighting visible buffers
+      highlight_visible = true,
+
+      icons = {
+        -- Configure the base icons on the bufferline.
+        -- Valid options to display the buffer index and -number are `true`, 'superscript' and 'subscript'
+        -- buffer_index = true,
+        -- buffer_number = true,
+        button = '',
+        -- Enables / disables diagnostic symbols
+        diagnostics = {
+          [vim.diagnostic.severity.ERROR] = { enabled = true, icon = 'ﬀ' },
+          [vim.diagnostic.severity.WARN] = { enabled = false },
+          [vim.diagnostic.severity.INFO] = { enabled = false },
+          [vim.diagnostic.severity.HINT] = { enabled = true },
+        },
+        gitsigns = {
+          added = { enabled = true, icon = '+' },
+          changed = { enabled = true, icon = '~' },
+          deleted = { enabled = true, icon = '-' },
+        },
+        filetype = {
+          -- Sets the icon's highlight group.
+          -- If false, will use nvim-web-devicons colors
+          custom_colors = false,
+
+          -- Requires `nvim-web-devicons` if `true`
+          enabled = true,
+        },
+        separator = { left = '▎', right = '' },
+
+        -- If true, add an additional separator at the end of the buffer list
+        separator_at_end = true,
+
+        -- Configure the icons on the bufferline when modified or pinned.
+        -- Supports all the base icon options.
+        modified = { button = '●' },
+        pinned = { button = '', filename = true },
+
+        -- Use a preconfigured buffer appearance— can be 'default', 'powerline', or 'slanted'
+        preset = 'default',
+
+        -- Configure the icons on the bufferline based on the visibility of a buffer.
+        -- Supports all the base icon options, plus `modified` and `pinned`.
+        alternate = { filetype = { enabled = false } },
+        current = { buffer_index = true },
+        inactive = { button = '×' },
+        visible = { modified = { buffer_number = false } },
+        -- If set, the letters for each buffer in buffer-pick mode will be
+        -- assigned based on their name. Otherwise or in case all letters are
+        -- already assigned, the behavior is to assign letters in order of
+        -- usability (see order below)
+        semantic_letters = true,
+
+        -- Set the filetypes which barbar will offset itself for
+        sidebar_filetypes = {
+          -- Use the default values: {event = 'BufWinLeave', text = '', align = 'left'}
+          NvimTree = true,
+          -- Or, specify the text used for the offset:
+          undotree = {
+            text = 'undotree',
+            align = 'center', -- *optionally* specify an alignment (either 'left', 'center', or 'right')
+          },
+          -- Or, specify the event which the sidebar executes when leaving:
+          ['neo-tree'] = { event = 'BufWipeout' },
+          -- Or, specify all three
+          Outline = { event = 'BufWinLeave', text = 'symbols-outline', align = 'right' },
+        },
+
+        -- New buffer letters are assigned in this order. This order is
+        -- optimal for the qwerty keyboard layout but might need adjustment
+        -- for other layouts.
+        letters = 'asdfjkl;ghnmxcvbziowerutyqpASDFJKLGHNMXCVBZIOWERUTYQP',
+
+        -- Sets the name of unnamed buffers. By default format is "[Buffer X]"
+        -- where X is the buffer number. But only a static string is accepted here.
+        no_name_title = nil,
+      },
+    },
+    version = '^1.0.0', -- optional: only update when a new 1.x version is released
+  },
+  -- snippets of code
+  { 'rafamadriz/friendly-snippets' },
   -- "gc" to comment visual regions/lines
   { 'numToStr/Comment.nvim', opts = {} },
 

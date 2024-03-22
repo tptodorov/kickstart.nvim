@@ -177,7 +177,7 @@ return {
     opts = true,
     keys = {
       {
-        '<leader>a',
+        '<leader>da',
         function()
           require('neogen').generate()
         end,
