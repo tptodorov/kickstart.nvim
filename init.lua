@@ -170,6 +170,7 @@ vim.keymap.set('n', '<Esc>', '<cmd>nohlsearch<CR>')
 -- Diagnostic keymaps
 vim.keymap.set('n', '[d', vim.diagnostic.goto_prev, { desc = 'Go to previous [D]iagnostic message' })
 vim.keymap.set('n', ']d', vim.diagnostic.goto_next, { desc = 'Go to next [D]iagnostic message' })
+vim.keymap.set('n', '<F2>', vim.diagnostic.goto_next, { desc = 'Go to next [D]iagnostic message' })
 vim.keymap.set('n', '<leader>e', vim.diagnostic.open_float, { desc = 'Show diagnostic [E]rror messages' })
 vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagnostic [Q]uickfix list' })
 
@@ -304,6 +305,21 @@ require('lazy').setup({
       require('crates').setup()
     end,
   },
+  -- workspaces
+  {
+    'sanathks/workspace.nvim',
+    dependencies = { 'nvim-telescope/telescope.nvim' },
+    config = function()
+      require('workspace').setup {
+        workspaces = {
+          { name = 'Work', path = '~/enshift', keymap = { '<leader>ww' } },
+          { name = 'Personal', path = '~/todor/tptodorov', keymap = { '<leader>wp' } },
+        },
+      }
+      local workspace = require 'workspace'
+      vim.keymap.set('n', '<leader>ps', workspace.tmux_sessions)
+    end,
+  },
   -- show file symbols and structure on the side
   {
     'stevearc/aerial.nvim',
@@ -330,6 +346,14 @@ require('lazy').setup({
     lazy = false,
     dependencies = {
       'nvim-tree/nvim-web-devicons',
+    },
+
+    opts = {
+      -- show current folder activated
+      update_focused_file = {
+        enable = true,
+        update_cwd = true,
+      },
     },
     config = function()
       require('nvim-tree').setup {}
@@ -505,6 +529,16 @@ require('lazy').setup({
     },
     version = '^1.0.0', -- optional: only update when a new 1.x version is released
   },
+  {
+    'Exafunction/codeium.nvim',
+    dependencies = {
+      'nvim-lua/plenary.nvim',
+      'hrsh7th/nvim-cmp',
+    },
+    config = function()
+      require('codeium').setup {}
+    end,
+  },
   -- snippets of code
   { 'rafamadriz/friendly-snippets' },
   -- "gc" to comment visual regions/lines
@@ -640,12 +674,15 @@ require('lazy').setup({
       vim.keymap.set('n', '<leader>sh', builtin.help_tags, { desc = '[S]earch [H]elp' })
       vim.keymap.set('n', '<leader>sk', builtin.keymaps, { desc = '[S]earch [K]eymaps' })
       vim.keymap.set('n', '<leader>sf', builtin.find_files, { desc = '[S]earch [F]iles' })
+      vim.keymap.set('n', '<D-S-o>', builtin.find_files, { desc = '[S]earch [F]iles' })
       vim.keymap.set('n', '<leader>ss', builtin.builtin, { desc = '[S]earch [S]elect Telescope' })
-      vim.keymap.set('n', '<leader>sw', builtin.grep_string, { desc = '[S]earch current [W]ord' })
+      vim.keymap.set('n', '<D-f>', builtin.grep_string, { desc = '[S]earch current [W]ord' })
       vim.keymap.set('n', '<leader>sg', builtin.live_grep, { desc = '[S]earch by [G]rep' })
+      vim.keymap.set('n', '<D-S-f>', builtin.live_grep, { desc = '[S]earch by [G]rep' })
       vim.keymap.set('n', '<leader>sd', builtin.diagnostics, { desc = '[S]earch [D]iagnostics' })
       vim.keymap.set('n', '<leader>sr', builtin.resume, { desc = '[S]earch [R]esume' })
       vim.keymap.set('n', '<leader>s.', builtin.oldfiles, { desc = '[S]earch Recent Files ("." for repeat)' })
+      vim.keymap.set('n', '<D-e>', builtin.oldfiles, { desc = '[S]earch Recent Files ("." for repeat)' })
       vim.keymap.set('n', '<leader><leader>', builtin.buffers, { desc = '[ ] Find existing buffers' })
 
       -- Slightly advanced example of overriding default behavior and theme
@@ -759,6 +796,7 @@ require('lazy').setup({
           -- Rename the variable under your cursor.
           --  Most Language Servers support renaming across files, etc.
           map('<leader>rn', vim.lsp.buf.rename, '[R]e[n]ame')
+          map('<F6>', vim.lsp.buf.rename, '[R]e[n]ame')
 
           -- Execute a code action, usually your cursor needs to be on top of an error
           -- or a suggestion from your LSP for this to activate.
@@ -1041,6 +1079,7 @@ require('lazy').setup({
           { name = 'nvim_lsp' },
           { name = 'luasnip' },
           { name = 'path' },
+          { name = 'codeium' },
         },
       }
     end,
